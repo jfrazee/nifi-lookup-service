@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.lookup;
+package org.apache.nifi.lookup.services;
 
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
@@ -29,6 +29,7 @@ import org.apache.nifi.reporting.InitializationException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -36,13 +37,15 @@ import java.util.concurrent.ConcurrentMap;
 @CapabilityDescription("A local in-memory lookup table backed by a concurrent map")
 public class InMemoryLookupTableService extends AbstractControllerService implements LookupTableService {
 
-    public static final PropertyDescriptor PROP_INITIAL_CAPACITY = new PropertyDescriptor.Builder()
-                                                                           .name("Initial Capacity")
-                                                                           .description("Example Property")
-                                                                           .required(true)
-                                                                           .defaultValue("1000")
-                                                                           .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
-                                                                           .build();
+    public static final PropertyDescriptor PROP_INITIAL_CAPACITY =
+        new PropertyDescriptor.Builder()
+            .name("initial-capacity")
+            .displayName("Initial Capacity")
+            .description("Initial capacity")
+            .required(true)
+            .defaultValue("1000")
+            .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
+            .build();
 
     private static final List<PropertyDescriptor> properties;
 
@@ -89,4 +92,16 @@ public class InMemoryLookupTableService extends AbstractControllerService implem
     public String putIfAbsent(String id, String value) {
         return cache.putIfAbsent(id, value);
     }
+
+    @Override
+    public Map<String, String> getAll() {
+        return Collections.unmodifiableMap(cache);
+    }
+
+    @Override
+    public Map<String, String> putAll(Map<String, String> values) {
+        cache.putAll(values);
+        return Collections.unmodifiableMap(cache);
+    }
+
 }

@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.lookup;
+package org.apache.nifi.lookup.services;
 
+import org.apache.nifi.lookup.processors.TestProcessor;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
@@ -23,7 +24,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class InMemoryLookupTableServiceTest {
+public class TestInMemoryLookupTableService {
 
     @Before
     public void init() {

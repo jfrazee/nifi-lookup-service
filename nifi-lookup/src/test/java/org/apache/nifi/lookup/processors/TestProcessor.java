@@ -14,13 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.lookup;
+package org.apache.nifi.lookup.processors;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.controller.ControllerService;
+import org.apache.nifi.lookup.services.LookupTableService;
+import org.apache.nifi.lookup.services.InMemoryLookupTableService;
 import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
@@ -43,4 +45,5 @@ public class TestProcessor extends AbstractProcessor {
                 .build());
         return propDescs;
     }
+
 }

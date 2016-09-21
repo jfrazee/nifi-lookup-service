@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.nifi.lookup;
+package org.apache.nifi.lookup.services;
 
+import java.util.Map;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.controller.ControllerService;
@@ -29,5 +30,9 @@ public interface LookupTableService extends ControllerService {
     String put(String id, String value);
 
     String putIfAbsent(String id, String value);
+
+    Map<String, String> getAll();
+
+    Map<String, String> putAll(Map<String, String> values);
 
 }
