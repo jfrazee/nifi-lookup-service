@@ -51,11 +51,11 @@ import org.apache.nifi.processor.util.StandardValidators;
 @EventDriven
 @SideEffectFree
 @InputRequirement(Requirement.INPUT_REQUIRED)
-@Tags({"attributes", "modification", "update", "delete", "Attribute Expression Language"})
-@CapabilityDescription("Updates the Attributes for a FlowFile by using the Attribute Expression Language and/or deletes the attributes based on a regular expression")
-@DynamicProperty(name = "A FlowFile attribute to update", value = "The value to set it to", supportsExpressionLanguage = true,
-        description = "Updates a FlowFile attribute specified by the Dynamic Property's key with the value specified by the Dynamic Property's value")
-@WritesAttribute(attribute = "See additional details", description = "This processor may write or remove zero or more attributes as described in additional details")
+@Tags({"attributes", "lookup", "properties", "cache", "Attribute Expression Language"})
+@CapabilityDescription("Lookup attributes from a lookup table")
+@DynamicProperty(name = "The name of the attribute to add to the FlowFile", value = "The name of the key or property to lookup from the lookup table", supportsExpressionLanguage = true,
+        description = "Adds a FlowFile attribute specified by the Dynamic Property's key with the value found in the lookup table using the the Dynamic Property's value")
+@WritesAttribute(attribute = "See additional details", description = "This processor may write zero or more attributes as described in additional details")
 public class LookupAttribute extends AbstractProcessor {
 
     public static final PropertyDescriptor LOOKUP_TABLE_SERVICE =
