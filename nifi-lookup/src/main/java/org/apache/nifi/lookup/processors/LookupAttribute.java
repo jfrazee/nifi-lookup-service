@@ -24,6 +24,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.EventDriven;
@@ -40,6 +42,7 @@ import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.controller.ControllerService;
 import org.apache.nifi.expression.AttributeExpression;
 import org.apache.nifi.flowfile.FlowFile;
+import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.lookup.services.LookupTableService;
 import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessContext;
@@ -48,6 +51,10 @@ import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 @EventDriven
 @SideEffectFree
@@ -78,6 +85,24 @@ public class LookupAttribute extends AbstractProcessor {
         .required(true)
         .build();
 
+    public static final PropertyDescriptor CACHE_SIZE = new PropertyDescriptor.Builder()
+            .name("cache-size")
+            .displayName("Cache size")
+            .description("Maximum number of keys to cache. Zero disables the cache.")
+            .required(true)
+            .defaultValue("1000")
+            .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
+            .build();
+
+    public static final PropertyDescriptor CACHE_TTL_AFTER_WRITE = new PropertyDescriptor.Builder()
+            .name("cache-ttl-after-write")
+            .displayName("Cache TTL after write")
+            .description("The cache TTL (time-to-live) or how long to keep keys in the cache after they're added.")
+            .required(true)
+            .defaultValue("60 secs")
+            .addValidator(StandardValidators.TIME_PERIOD_VALIDATOR)
+            .build();
+
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
             .description("All FlowFiles are routed to this relationship")
             .name("success")
@@ -86,6 +111,8 @@ public class LookupAttribute extends AbstractProcessor {
     private List<PropertyDescriptor> descriptors;
 
     private Set<Relationship> relationships;
+
+    private LoadingCache<String, String> cache;
 
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
@@ -114,11 +141,37 @@ public class LookupAttribute extends AbstractProcessor {
         final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
         descriptors.add(LOOKUP_TABLE_SERVICE);
         descriptors.add(INCLUDE_NULL_VALUES);
+        descriptors.add(CACHE_SIZE);
+        descriptors.add(CACHE_TTL_AFTER_WRITE);
         this.descriptors = Collections.unmodifiableList(descriptors);
 
         final Set<Relationship> relationships = new HashSet<Relationship>();
         relationships.add(REL_SUCCESS);
         this.relationships = Collections.unmodifiableSet(relationships);
+    }
+
+    @OnScheduled
+    public void onScheduled(final ProcessContext context) {
+        final LookupTableService lookupTableService = context.getProperty(LOOKUP_TABLE_SERVICE).asControllerService(LookupTableService.class);
+        final Integer cacheSize = context.getProperty(CACHE_SIZE).asInteger();
+        final Long cacheTTL = context.getProperty(CACHE_TTL_AFTER_WRITE).asTimePeriod(TimeUnit.SECONDS);
+
+        if (cacheSize > 0) {
+            CacheBuilder cacheBuilder = CacheBuilder.newBuilder().maximumSize(cacheSize);
+            if (cacheTTL > 0) {
+                cacheBuilder = cacheBuilder.expireAfterWrite(cacheTTL, TimeUnit.SECONDS);
+            }
+
+            cache = cacheBuilder.build(
+               new CacheLoader<String, String>() {
+                   public String load(String key) {
+                       return lookupTableService.get(key);
+                   }
+               });
+        } else {
+            cache = null;
+            getLogger().warn("Cache disabled because cache size is set to 0");
+        }
     }
 
     @Override
@@ -128,6 +181,7 @@ public class LookupAttribute extends AbstractProcessor {
             return;
         }
 
+        final ComponentLog logger = getLogger();
         final LookupTableService lookupTableService = context.getProperty(LOOKUP_TABLE_SERVICE).asControllerService(LookupTableService.class);
         final Boolean includeNullValues = context.getProperty(INCLUDE_NULL_VALUES).asBoolean();
 
@@ -146,7 +200,7 @@ public class LookupAttribute extends AbstractProcessor {
             // If there aren't any dynamic properties, load the entire lookup table
             final Map<String, String> lookupTable = lookupTableService.getAll();
             if (lookupTable.isEmpty()) {
-                getLogger().warn("No dynamic properties provided and lookup table is empty");
+                logger.warn("No dynamic properties provided and lookup table is empty");
             }
             for (final Map.Entry<String, String> e : lookupTable.entrySet()) {
                 final String attributeName = e.getKey();
@@ -159,13 +213,13 @@ public class LookupAttribute extends AbstractProcessor {
                 final PropertyValue lookupKeyExpression = e.getValue();
                 final String lookupKey = lookupKeyExpression.evaluateAttributeExpressions(flowFile).getValue();
                 final String attributeName = e.getKey().getName();
-                final String attributeValue = lookupTableService.get(lookupKey);
+                final String attributeValue = get(context, lookupKey);
                 if (attributeValue != null) {
                     attributes.put(attributeName, attributeValue);
                 } else if (includeNullValues) {
                     attributes.put(attributeName, "null");
                 } else {
-                    getLogger().warn("No such value for key: {}", new Object[]{lookupKey});
+                    logger.warn("No such value for key: {}", new Object[]{lookupKey});
                 }
             }
         }
@@ -173,4 +227,26 @@ public class LookupAttribute extends AbstractProcessor {
         flowFile = session.putAllAttributes(flowFile, attributes);
         session.transfer(flowFile, REL_SUCCESS);
     }
+
+    private String get(final ProcessContext context, final String key) {
+        final ComponentLog logger = getLogger();
+        final LookupTableService lookupTableService = context.getProperty(LOOKUP_TABLE_SERVICE).asControllerService(LookupTableService.class);
+        if (cache != null) {
+            try {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Looking up value from cache");
+                }
+                return cache.get(key);
+            } catch (final ExecutionException e) {
+                logger.error(e.getMessage(), e);
+            }
+        } else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Looking up value from service because cache is disabled");
+            }
+            return lookupTableService.get(key);
+        }
+        return null;
+    }
+
 }
