@@ -63,15 +63,12 @@ public class PropertiesFileLookupTableService extends AbstractControllerService 
 
     private List<PropertyDescriptor> properties;
 
-    private AtomicReference<ReloadingFileBasedConfigurationBuilder<PropertiesConfiguration>> builderRef;
+    private ReloadingFileBasedConfigurationBuilder<PropertiesConfiguration> builder;
 
     private Configuration getConfiguration() {
         try {
-            if (builderRef != null) {
-                final ReloadingFileBasedConfigurationBuilder<PropertiesConfiguration> builder = builderRef.get();
-                if (builder != null) {
-                    return builder.getConfiguration();
-                }
+            if (builder != null) {
+                return builder.getConfiguration();
             }
         } catch (final ConfigurationException e) {
             getLogger().error(e.getMessage(), e);
@@ -86,8 +83,6 @@ public class PropertiesFileLookupTableService extends AbstractControllerService 
 
     @Override
     protected void init(final ControllerServiceInitializationContext context) throws InitializationException {
-        this.builderRef = new AtomicReference<>(null);
-
         final List<PropertyDescriptor> properties = new ArrayList<>();
         properties.add(PROPERTIES_FILE);
         this.properties = Collections.unmodifiableList(properties);
@@ -98,9 +93,8 @@ public class PropertiesFileLookupTableService extends AbstractControllerService 
         final String path = context.getProperty(PROPERTIES_FILE).getValue();
         final File file = new File(path);
         final Parameters params = new Parameters();
-        final ReloadingFileBasedConfigurationBuilder<PropertiesConfiguration> builder =
-            new ReloadingFileBasedConfigurationBuilder<>(PropertiesConfiguration.class).configure(params.fileBased().setFile(file));
-        builder.addEventListener(ConfigurationBuilderEvent.CONFIGURATION_REQUEST,
+        this.builder = new ReloadingFileBasedConfigurationBuilder<>(PropertiesConfiguration.class).configure(params.fileBased().setFile(file));
+        this.builder.addEventListener(ConfigurationBuilderEvent.CONFIGURATION_REQUEST,
             new EventListener<ConfigurationBuilderEvent>() {
                 @Override
                 public void onEvent(ConfigurationBuilderEvent event) {
@@ -109,12 +103,11 @@ public class PropertiesFileLookupTableService extends AbstractControllerService 
                     }
                 }
             });
-        builderRef.set(builder);
     }
 
     @OnDisabled
     public void onDisabled() {
-        builderRef.set(null);
+        builder = null;
     }
 
     @Override

@@ -30,6 +30,7 @@ import org.apache.nifi.annotation.behavior.EventDriven;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.annotation.behavior.SideEffectFree;
+import org.apache.nifi.annotation.behavior.SupportsBatching;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
@@ -50,6 +51,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 
 @EventDriven
 @SideEffectFree
+@SupportsBatching
 @InputRequirement(Requirement.INPUT_REQUIRED)
 @Tags({"attributes", "lookup", "properties", "cache", "Attribute Expression Language"})
 @CapabilityDescription("Lookup attributes from a lookup table")
