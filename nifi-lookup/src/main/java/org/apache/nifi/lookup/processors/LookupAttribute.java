@@ -233,7 +233,9 @@ public class LookupAttribute extends AbstractProcessor {
                 } else if (includeNullValues) {
                     attributes.put(attributeName, "null");
                 } else {
-                    logger.warn("No such value for key: {}", new Object[]{lookupKey});
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("No such value for key: {}", new Object[]{lookupKey});
+                    }
                     notMatched = true;
                 }
             }
