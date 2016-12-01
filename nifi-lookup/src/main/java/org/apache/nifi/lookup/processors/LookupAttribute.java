@@ -227,7 +227,7 @@ public class LookupAttribute extends AbstractProcessor {
                 final PropertyValue lookupKeyExpression = e.getValue();
                 final String lookupKey = lookupKeyExpression.evaluateAttributeExpressions(flowFile).getValue();
                 final String attributeName = e.getKey().getName();
-                final String attributeValue = get(context, lookupKey);
+                final String attributeValue = get(lookupTableService, lookupKey);
                 if (attributeValue != null) {
                     attributes.put(attributeName, attributeValue);
                 } else if (includeNullValues) {
@@ -243,9 +243,8 @@ public class LookupAttribute extends AbstractProcessor {
         session.transfer(flowFile, notMatched ? REL_UNMATCHED : REL_SUCCESS);
     }
 
-    private String get(final ProcessContext context, final String key) {
+    private String get(final LookupTableService lookupTableService, final String key) {
         final ComponentLog logger = getLogger();
-        final LookupTableService lookupTableService = context.getProperty(LOOKUP_TABLE_SERVICE).asControllerService(LookupTableService.class);
         if (cache != null) {
             if (logger.isDebugEnabled()) {
                 logger.debug("Looking up value from cache");
