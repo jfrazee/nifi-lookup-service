@@ -23,8 +23,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.configuration2.Configuration;
 import org.apache.commons.configuration2.ex.ConfigurationException;
@@ -107,7 +105,7 @@ public class PropertiesFileLookupTableService extends AbstractControllerService 
 
     @OnDisabled
     public void onDisabled() {
-        builder = null;
+        this.builder = null;
     }
 
     @Override
