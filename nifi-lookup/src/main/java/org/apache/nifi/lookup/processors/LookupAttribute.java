@@ -16,17 +16,6 @@
  */
 package org.apache.nifi.lookup.processors;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.EventDriven;
 import org.apache.nifi.annotation.behavior.InputRequirement;
@@ -39,7 +28,6 @@ import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.PropertyValue;
-import org.apache.nifi.controller.ControllerService;
 import org.apache.nifi.expression.AttributeExpression;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.logging.ComponentLog;
@@ -51,6 +39,14 @@ import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @EventDriven
 @SideEffectFree
@@ -149,14 +145,17 @@ public class LookupAttribute extends AbstractProcessor {
 
     @Override
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-        FlowFile flowFile = session.get();
-        if (flowFile == null) {
-            return;
-        }
-
         final ComponentLog logger = getLogger();
         final LookupTableService lookupTableService = context.getProperty(LOOKUP_TABLE_SERVICE).asControllerService(LookupTableService.class);
-        final Boolean includeNullValues = context.getProperty(INCLUDE_NULL_VALUES).asBoolean();
+        final boolean includeNullValues = context.getProperty(INCLUDE_NULL_VALUES).asBoolean();
+
+        for (FlowFile flowFile : session.get(50)) {
+            doOnTrigger(logger, lookupTableService, includeNullValues, flowFile, session);
+        }
+    }
+
+    private void doOnTrigger(ComponentLog logger, LookupTableService lookupTableService, boolean includeNullValues, FlowFile flowFile, ProcessSession session)
+            throws ProcessException {
         final Map<String, String> attributes = new HashMap<>(flowFile.getAttributes());
 
         boolean notMatched = false;
