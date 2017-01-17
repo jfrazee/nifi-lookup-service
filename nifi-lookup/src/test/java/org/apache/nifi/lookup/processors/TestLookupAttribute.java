@@ -30,6 +30,7 @@ import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -86,6 +87,7 @@ public class TestLookupAttribute {
         flowFile.assertAttributeNotExists("myproperty.2");
     }
 
+    @Ignore
     @Test
     public void testLookupAttributeWithPropertiesFileLookupAndReload() throws InitializationException, IOException, InterruptedException {
         // final Path testPath = Files.createTempFile("test", "properties");

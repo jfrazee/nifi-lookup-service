@@ -39,6 +39,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestPropertiesFileLookupTableService {
@@ -72,6 +73,7 @@ public class TestPropertiesFileLookupTableService {
         assertEquals(expectedProperties, actualProperties);
     }
 
+    @Ignore
     @Test
     public void testServiceWithReload() throws InitializationException, IOException, InterruptedException {
         final Path testPath = Files.createTempFile("test", "properties");
@@ -100,7 +102,6 @@ public class TestPropertiesFileLookupTableService {
             expectedProperties1.put("myproperty.2", "2");
             assertEquals(expectedProperties1, actualProperties1);
 
-            Thread.sleep(5000);
             Files.write(testPath, Arrays.asList("myproperty.1=this is property 1 modified", "myproperty.3=this is property 3"), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
 
             final String myProperty12 = service.get("myproperty.1");
